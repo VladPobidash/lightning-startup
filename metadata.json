@@ -1,0 +1,6 @@
+{
+  "name": "lng_rtk_template",
+  "identifier": "com.rtk.lightning",
+  "version": "1.0.0",
+  "icon": "./static/rocket.png"
+}
