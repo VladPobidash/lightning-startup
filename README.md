@@ -107,8 +107,10 @@ More about asynchronous logic and data fetching with RTK read [here](https://red
 > **Warning:** it's not production-ready implementation, just for example. We add more realistic logic in the `rtk/advanced-setup` branch.
 
 In the `router/setup` branch we've added the `CounterScreen` with a necessary template for current logic. **Important tip & trick:** we should update our template with [pass signals](https://rdkcentral.github.io/Lightning/docs/components/communication/signal#pass-signals) to pass over a signal to the parent otherwise we cannot reach the handler method.
-![[./screenshots/counter_screen_update.png]]
-#### Let's expand it with Redux
+
+![counter_screen_update](./screenshots/counter_screen_update.png)
+
+### Let's expand it with Redux
 Firstly, we should `import store from './logic/store'`.
 Secondly, we subscribe our component for store update and call the initial dispatch on the `_init` hook. Whenever the state will update - our subscribed component gets the necessary value and update it on the template.
 ```javascript
