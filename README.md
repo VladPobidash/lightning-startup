@@ -21,7 +21,10 @@ export const store = configureStore({
 ```
 
 #### Slice creation
-Redux slice it's a common Redux reducer with build-in common use-cases implementation out of the box. For slice creation follow the next flow:
+Redux slice it's a common Redux reducer with build-in common use-cases implementation out of the box.
+> **Note:** reducer functions may "mutate" the state using Immer under the hood.
+
+#### For slice creation follow the next flow:
 1. In the `logic` folder create relevant slice folder. It's `logic/counter` in our case;
 2. Use the next pattern for a slice file naming and content
 	- `sliceName.slice.js` for main logic
@@ -29,8 +32,6 @@ Redux slice it's a common Redux reducer with build-in common use-cases implement
 	- `sliceName.selector.js` for getting state data
 	- `sliceName.thunk.js` for asyn actions
 	- `README.md` for description (optional)
-
-> **Note:** reducer functions may "mutate" the state using Immer under the hood.
 
 Counter slice files have next content:
 ```javascript
@@ -106,7 +107,7 @@ More about asynchronous logic and data fetching with RTK read [here](https://red
 > **Warning:** it's not production-ready implementation, just for example. We add more realistic logic in the `rtk/advanced-setup` branch.
 
 In the `router/setup` branch we've added the `CounterScreen` with a necessary template for current logic. **Important tip & trick:** we should update our template with [pass signals](https://rdkcentral.github.io/Lightning/docs/components/communication/signal#pass-signals) to pass over a signal to the parent otherwise we cannot reach the handler method.
-![[Pasted image 20220623174229.png]]
+![[./screenshots/counter_screen_update.png]]
 #### Let's expand it with Redux
 Firstly, we should `import store from './logic/store'`.
 Secondly, we subscribe our component for store update and call the initial dispatch on the `_init` hook. Whenever the state will update - our subscribed component gets the necessary value and update it on the template.
