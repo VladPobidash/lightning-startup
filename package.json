@@ -2,7 +2,8 @@
   "name": "com.startup.lightning",
   "description": "lng_startup",
   "dependencies": {
-    "@lightningjs/sdk": "^4.8.3"
+    "@lightningjs/sdk": "^4.8.3",
+    "@reduxjs/toolkit": "^1.8.2"
   },
   "lint-staged": {
     "*.js": [

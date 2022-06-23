@@ -1,84 +1,140 @@
-# Lightning startup
-Lightning is a (TV) app development framework that offers great **portability** and **performance**.
+# Redux ToolKit setup for LightningJS application
+> RTK simplifies your code _and_ eliminates many common Redux mistakes and bugs! [Official docs](https://redux-toolkit.js.org)
 
-## About repo
-Every branch has an uniq README file with implemented features description, code snippets, useful links, tricks & tips. Look below for the brief branch description.
-- `blank-template` contains an empty application ready for development
-- `router/`
-	- `setup` basic router setup example (preparation for `rtk/setup`)
-	- `with-rtk` advanced router setup with Redux ToolKit features
-		(only after `rtk/setup` & `rtk/advanced-setup`)
-- `rtk/`
-	- `setup` RTK usage on trivial counter app example
-	- `advanced-setup` close to real-life RTK setup
+For more info about RTK read [Why Redux Toolkit is How To Use Redux Today](https://redux.js.org/introduction/why-rtk-is-redux-today).
 
-### Useful links
-- [Official site](https://lightningjs.io/)
-- [Official docs](https://lightningjs.io/docs)
-	Includes:
-	- [Getting Started Guide](https://lightningjs.io/docs/#/getting-started/index?id=getting-started-guide)
-	- [Lightning Core Reference](https://lightningjs.io/docs/#/lightning-core-reference/index?id=lightning-core-reference)
-	- [Lightning SDK Reference](https://lightningjs.io/docs/#/lightning-sdk-reference/index?id=lightning-sdk-reference)
-	- [Lightning CLI Reference](https://lightningjs.io/docs/#/lightning-cli-reference/index?id=lightning-cli-reference)
-	- [Lightning UI Reference](https://lightningjs.io/docs/#/lightning-ui-reference/index?id=lightning-ui-reference)
-- [Additional core docs](https://rdkcentral.github.io/Lightning/docs/introduction/introduction)
-- [Lightning-SDK docs](https://rdkcentral.github.io/Lightning-SDK) helps you build great Lightning-based TV apps.
-	Includes such plugins as [Router](https://rdkcentral.github.io/Lightning-SDK/#/plugins/router/index?id=router), [VideoPlayer](https://rdkcentral.github.io/Lightning-SDK/#/plugins/videoplayer?id=videoplayer), etc)
-- [LightningJS Forum](https://forum.lightningjs.io/) discuss everything related to LightningJS
+Let's look at how to set up a basic store for the LightningJS app with Redux Toolkit (RTK). For example, we'll create a trivial counter app.
 
+Firstly add the Redux Toolkit package to your project `npm install @reduxjs/toolkit` and download Redux DevTools for Chrome [here](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd).
 
-Firstly, create our feature pages. We locale them in `src/pages` or, in our case, `src/screens` folder. Each screen has a separate folder because in the advanced use-cases we'll have helper files such as store connection, utils, constants, styles, etc.
-
-> Before you follow the steps below, make sure you have
-[NodeJS](https://nodejs.org/en/download) and [Lightning-CLI](https://rdkcentral.github.io/Lightning-CLI/#/) installed _globally_ only your system
-
-Secondly, create a file named `src/routes.js` which contains plain objects with route configuration. See [Router Configuration](https://rdkcentral.github.io/Lightning-SDK/#/plugins/router/configuration?id=router-configuration) for more details.
+#### Configure our store
+Create a file named `src/logic/store.js`. Import the `configureStore` API from Redux Toolkit. Read more about store configuration [on the official docs](https://redux-toolkit.js.org/api/configureStore).
 ```javascript
-// src/routes.js
+import { configureStore } from '@reduxjs/toolkit'
+import counter from './counter/counter.slice'
 
-import { CounterScreen } from './screens/Counter/CounterScreen'
-import { SplashScreen } from './screens/Splash/SplashScreen'
-import { StartScreen } from './screens/Start/StartScreen'
+export const store = configureStore({
+  reducer: {
+    counter,
+  },
+})
+```
 
-export default {
-  root: 'start',
-  routes: [
-    {
-      path: '$',
-      component: SplashScreen,
+#### Slice creation
+Redux slice it's a common Redux reducer with build-in common use-cases implementation out of the box. For slice creation follow the next flow:
+1. In the `logic` folder create relevant slice folder. It's `logic/counter` in our case;
+2. Use the next pattern for a slice file naming and content
+	- `sliceName.slice.js` for main logic
+	- `sliceName.constants.js` for constants
+	- `sliceName.selector.js` for getting state data
+	- `sliceName.thunk.js` for asyn actions
+	- `README.md` for description (optional)
+
+> **Note:** reducer functions may "mutate" the state using Immer under the hood.
+
+Counter slice files have next content:
+```javascript
+// src/logic/counter.constants.js
+
+export const name = 'counter'
+```
+```javascript
+// src/logic/counter.selector.js
+
+export const getCounterValue = state => state.counter.value
+```
+```javascript
+// src/logic/counter.slice.js
+
+import { createSlice } from '@reduxjs/toolkit'
+
+const counterSlice = createSlice({
+  name: 'counter',
+  initialState: {
+	value: 0
+  },
+  reducers: {
+    increment(state) {
+      state.value++
     },
-    {
-      path: 'start',
-      component: StartScreen,
+    decrement(state) {
+      state.value--
     },
-    {
-      path: 'counter',
-      component: CounterScreen,
+    incrementByAmount(state, action) {
+      state.value += action.payload
     },
-  ],
+  },
+})
+
+export const { increment, decrement } = counterSlice.actions
+export default counterSlice.reducer
+
+export const asyncIncrement = () => async dispatch => {
+  const value = await new Promise((resolve, reject) => {
+    setTimeout(() => {
+      resolve(5)
+    }, 1000)
+  })
+
+  dispatch(counterSlice.actions.incrementByAmount(value))
 }
 ```
-
-> See relevant component files for more template details...
-
-**Breafly**, in the `SplashScreen` component we use `Router.resume()` for navigation to `StartScreen` on page loaded. Currently, we use `setTimeout` as a mock app loading. We add more realistic logic in the `advanced` branch.
-Also, in the `StartScreen` we add some navigation buttons, but it's not production-ready implementation, just for example and our understanding. We use `Router.navigate('toPath')` on `_handleEnter` method for navigate to current active `NavItem` address, which we set as a value for a `to` field on `_init` method.
-
-**Finnaly**, to power our App with Router capabilities, we must add some configurations in the `App.js` component. It's really simple.
+> **Note:** A function that accepts an initial state, an object of reducer functions, and a "slice name", and automatically generates action creators and action types that correspond to the reducers and state. This API is the standard approach for writing Redux logic.
 ```javascript
-import { Router } from '@lightningjs/sdk'
-import routes from './routes'
-```
-Extends `Router.App` for the `App` class and add `Router.startRouter(routes, this)` in the `_setup` method. Done! Together the final step looks like:
-```javascript
-import { Utils, Router } from '@lightningjs/sdk'
-import routes from './routes'
+// src/logic/counter.thunk.js
 
-export default class App extends Router.App {
-  _setup() {
-    Router.startRouter(routes, this)
+import { createAsyncThunk } from '@reduxjs/toolkit'
+import { name } from './counter.constants'
+import { incrementByAmount } from './counter.slice'
+
+export const asyncIncrement = createAsyncThunk(
+  `${name}/asyncIncrement`,
+  async (_, { dispatch }) => {
+    const value = await new Promise((resolve, reject) => {
+      setTimeout(() => {
+        resolve(5)
+      }, 1000)
+    })
+
+    await dispatch(incrementByAmount(value))
   }
-}
+)
+```
+More about asynchronous logic and data fetching with RTK read [here](https://redux-toolkit.js.org/usage/usage-guide#asynchronous-logic-and-data-fetching).
+
+# Using Redux on Lightning component
+> **Warning:** it's not production-ready implementation, just for example. We add more realistic logic in the `rtk/advanced-setup` branch.
+
+In the `router/setup` branch we've added the `CounterScreen` with a necessary template for current logic. **Important tip & trick:** we should update our template with [pass signals](https://rdkcentral.github.io/Lightning/docs/components/communication/signal#pass-signals) to pass over a signal to the parent otherwise we cannot reach the handler method.
+![[Pasted image 20220623174229.png]]
+#### Let's expand it with Redux
+Firstly, we should `import store from './logic/store'`.
+Secondly, we subscribe our component for store update and call the initial dispatch on the `_init` hook. Whenever the state will update - our subscribed component gets the necessary value and update it on the template.
+```javascript
+  _init() {
+    this.focusIndex = 0
+
+    store.subscribe(() => {     
+	  const state = store.getState()
+      this.tag('CounterScreen.Counter').text.text = getCounterValue(state)
+    })
+
+    store.dispatch({ type: '__INIT__' })
+  }
+```
+Thirdly, add the handler methods for our buttons signals and dispatch appropriate action which should be imported above.
+```javascript
+  _increment() {
+    store.dispatch(increment())
+  }
+
+  _decrement() {
+    store.dispatch(decrement())
+  }
+
+  _asyncIncrement() {
+    store.dispatch(asyncIncrement())
+  }
 ```
 
-That's it. We've set up basic Routing for our Lightning app.
+Nice! We've made friends Redux with Lightning component.

@@ -1,4 +1,8 @@
 import { Lightning } from '@lightningjs/sdk'
+import { getCounterValue } from '../../logic/counter/counter.selector'
+import { decrement, increment } from '../../logic/counter/counter.slice'
+import { asyncIncrement } from '../../logic/counter/counter.thunk'
+import { store } from '../../logic/store'
 import BlueCenter from '../../ui/templates/BlueCenter'
 
 export class CounterScreen extends Lightning.Component {
@@ -8,29 +12,35 @@ export class CounterScreen extends Lightning.Component {
         type: BlueCenter,
         Counter: {
           text: {
-            text: '0',
+            text: '',
             fontSize: 32,
           },
         },
         Buttons: {
+          w: 570,
           y: 50,
           IncrementButton: {
             type: Button,
             buttonText: 'Increment',
-            signals: { onEnter: 'increment' },
+            passSignals: { onEnter: '_increment' },
           },
           DecrementButton: {
             x: 200,
             type: Button,
             buttonText: 'Decrement',
-            signals: { onEnter: 'decrement' },
+            passSignals: { onEnter: '_decrement' },
           },
           AsyncIncrementButton: {
             x: 400,
             type: Button,
             buttonText: 'Async Increment',
-            signals: { onEnter: 'asyncIncrement' },
+            passSignals: { onEnter: '_asyncIncrement' },
           },
+        },
+        signals: {
+          _increment: true,
+          _decrement: true,
+          _asyncIncrement: true,
         },
       },
     }
@@ -38,6 +48,13 @@ export class CounterScreen extends Lightning.Component {
 
   _init() {
     this.focusIndex = 0
+
+    store.subscribe(() => {
+      const state = store.getState()
+      this.tag('CounterScreen.Counter').text.text = getCounterValue(state)
+    })
+
+    store.dispatch({ type: '__INIT__' })
   }
 
   _handleLeft() {
@@ -53,6 +70,18 @@ export class CounterScreen extends Lightning.Component {
 
   _getFocused() {
     return this.tag('CounterScreen.Buttons').children[this.focusIndex]
+  }
+
+  _increment() {
+    store.dispatch(increment())
+  }
+
+  _decrement() {
+    store.dispatch(decrement())
+  }
+
+  _asyncIncrement() {
+    store.dispatch(asyncIncrement())
   }
 }
 
@@ -71,6 +100,7 @@ class Button extends Lightning.Component {
       },
     }
   }
+
   _init() {
     this.tag('Label').patch({ text: { text: this.buttonText } })
   }
