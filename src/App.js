@@ -1,6 +1,7 @@
-import { Lightning, Utils } from '@lightningjs/sdk'
+import { Utils, Router } from '@lightningjs/sdk'
+import routes from './routes'
 
-export default class App extends Lightning.Component {
+export default class App extends Router.App {
   static getFonts() {
     return [
       {
@@ -10,7 +11,7 @@ export default class App extends Lightning.Component {
     ]
   }
 
-  static _template() {
-    return {}
+  _setup() {
+    Router.startRouter(routes, this)
   }
 }
