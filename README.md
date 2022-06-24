@@ -1,5 +1,5 @@
 # First boot | Advanced Router setup with RTK for LightningJS application
-> **Alert:** following stuff requires axios installation. Run `npm i axios`.
+> **Alert:** following stuff requires axios installation. Run `npm i axios axios-retry`.
 
 For close to real-life first app loading process we should add a lot of stuff. But it's all starts form adding the `boot` method in the `src/router.js`:
 
