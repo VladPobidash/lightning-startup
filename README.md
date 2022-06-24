@@ -6,11 +6,11 @@ Every branch has an uniq README file with implemented features description, code
 - `blank-template` contains an empty application ready for development
 - `router/`
 	- `setup` basic router setup example (preparation for `rtk/setup`)
-	- `with-rtk` advanced router setup with Redux ToolKit features
-		(only after `rtk/setup` & `rtk/advanced-setup`)
 - `rtk/`
 	- `setup` RTK usage on trivial counter app example
 	- `advanced-setup` close to real-life RTK setup
+- `advanced/`
+  - `boot-setup` close to real-life boot setup with router API, RTK and axios requests
 
 ### Useful links
 - [Official site](https://lightningjs.io/)
