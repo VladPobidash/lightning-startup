@@ -3,7 +3,9 @@
   "description": "lng_startup",
   "dependencies": {
     "@lightningjs/sdk": "^4.8.3",
-    "@reduxjs/toolkit": "^1.8.2"
+    "@reduxjs/toolkit": "^1.8.2",
+    "axios": "^0.27.2",
+    "axios-retry": "^3.2.5"
   },
   "lint-staged": {
     "*.js": [

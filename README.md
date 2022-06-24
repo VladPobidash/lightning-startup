@@ -1,97 +1,62 @@
-# Advanced RTK setup for LightningJS application
+# First boot | Advanced Router setup with RTK for LightningJS application
+> **Alert:** following stuff requires axios installation. Run `npm i axios`.
 
-To close to real-life RTK usage we should create reusable connect logic. Let's create a `src/logic/connect.js` file and use the next code snippet:
+For close to real-life first app loading process we should add a lot of stuff. But it's all starts form adding the `boot` method in the `src/router.js`:
 
 ```javascript
-import { store } from './store'
-
-const { getState, subscribe } = store
-
-const defaultCondition = ({ currentProp, previousProp }) => currentProp !== previousProp
-
-export const handleStoreUpdate = (controllers, getState) => () => {
-  const state = getState()
-  const keys = Object.keys(controllers)
-
-  for (let i = 0; i < keys.length; i += 1) {
-    const controller = controllers[keys[i]]
-    const { condition, selector, callback, _previousProp } = controller
-    const predicate = condition || defaultCondition
-
-    const currentProp = selector(state)
-
-    const shouldUpdate = predicate({ previousProp: _previousProp, currentProp })
-
-    if (shouldUpdate) {
-      controller._previousProp = currentProp
-      callback(currentProp)
-    }
-  }
-}
-
-export const connect = controllers => instance => {
-  const controllersToSubscribe = controllers(instance)
-
-  // Allow components to receive Redux state on connect
-  const state = getState()
-
-  const orderControllers = Array.isArray(controllersToSubscribe)
-    ? controllersToSubscribe
-    : Object.values(controllersToSubscribe)
-
-  orderControllers.forEach(({ selector, callback }) => {
-    if (callback && selector) {
-      callback(selector(state))
-    }
-  })
-
-  const unsubscribe = subscribe(handleStoreUpdate(controllersToSubscribe, getState))
-
-  return () => {
-    const keys = Object.keys(controllers)
-    for (let i = 0; i < keys.length; i += 1) {
-      const controller = controllers[keys[i]]
-      controller._previousProp = undefined
-    }
-    unsubscribe()
-  }
-}
-
-export const stateToProp = (selector, instance, name) => ({
-  selector,
-  callback: value => {
-    instance[name] = value
+{
+  // ...
+  boot: async () => {
+    await store.dispatch(loadApp())
   },
+  // ...
+}
+```
+
+We dispatch a `loadApp` thunk. It's a part of a new store slice named `app` containing app logic related to the app boot process and general config.
+
+```javascript
+// src/logic/app/app.thunk.js
+
+import { createAsyncThunk } from '@reduxjs/toolkit'
+import { myIP } from '../../client/ip'
+import { layoutData } from '../../client/layout'
+import { loadLayout } from '../layout/layout.slice'
+import { setIP, signIn } from '../user/user.slice'
+import { name } from './app.constants'
+
+export const loadApp = createAsyncThunk(`${name}/load`, async (_, { dispatch }) => {
+  // TODO: replace it by some real app loading actions, config fetching, etc.
+  const { data } = await myIP()
+  await dispatch(setIP(data.ip))
+
+  const layout = await layoutData()
+
+  // TODO: should be some authN API call
+  await dispatch(signIn({ userId: 123 }))
+  await dispatch(loadLayout({ layout: layout.data.results }))
 })
 ```
 
-We've created useful functions for our components. Now, we can update our `CounterScreen` using this stuff.
+> **Briefly,** it gets and sets the user's IP, runs auth and loads data for layout.
 
-Firstly, we should create a `screens/Counter/CounterScreen.connect.js` file with next code snippet:
+As you can see we use some functions from a new `client` directory.
+It's a wrapper for client-server interactions and contains a module that should be executed once per the app's lifecycle.
+So, `myIp` and `layoutData` just common axios GET requests, `setIP`, `signIn` and `loadLayout` - actions for a new slices.
+
+> **Alert:** See code files for more details.
+
+#### Axios retry
+Also, don't forget to add axios retry for our app. Just add `import './client/setup'` in `src/index.js`.
+It's a simple plugin that intercepts failed requests and retries them whenever possible.
+
+Finally, we should use new logic in our components. Replace mocked loading in a `SplashScreen`. Also you can get layout data and user ip using `connect` and `stateToProp`.
 
 ```javascript
-import { connect, stateToProp } from '../../logic/connect'
-import { getCounterValue } from '../../logic/counter/counter.selector'
+import connect from './SplashScreen.connect'
 
-export default connect(instance => [stateToProp(getCounterValue, instance, 'counter')])
-```
+// template
 
-The `connect` function automatically subscribes to the store update and calls our callbacks if a component should update.
-It gets a callback as a parameter that gets the component `instance` (`this` object) and returns an array of subscribers handlers.
-
-The `stateToProp` for a component instance (second param, `this` object in a connected component) sets a value by `name`(third param, `'counter'`) and automatically gets updated value from store with selector (first param, '`getCounterValue`').
-
-Finaly, let's update our `CounterScreen`.
-1. Remove all store logic from the `_init` hook.
-2. Add related setter (name must be equal to the third param of `stateToProp` func).
-Here we can do all the necessary stuff when state updated.
-```javascript
-set counter(value) {
-  this.tag('CounterScreen.Counter').text.text = value
-}
-```
-3. Connect a component to the store
-```javascript
 _active() {
   this._unsubscribe = connect(this)
 }
@@ -101,6 +66,19 @@ _inactive() {
     this._unsubscribe()
   }
 }
+
+set isReady(value) {
+  if (value) {
+    setTimeout(() => Router.resume(), 1000)
+  }
+}
+```
+```javascript
+// SplashScreen.connect
+import { connect, stateToProp } from '../../logic/connect'
+import { isReady } from '../../logic/app/app.selectors'
+
+export default connect((instance) => [stateToProp(isReady, instance, 'isReady')])
 ```
 
-Good job! Nothing difficult, just follow this pattern.
+The end. I'm tired, are you?
