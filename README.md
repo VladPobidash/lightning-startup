@@ -1,143 +1,106 @@
-# Redux ToolKit setup for LightningJS application
-> RTK simplifies your code _and_ eliminates many common Redux mistakes and bugs! [Official docs](https://redux-toolkit.js.org)
+# Advanced RTK setup for LightningJS application
 
-For more info about RTK read [Why Redux Toolkit is How To Use Redux Today](https://redux.js.org/introduction/why-rtk-is-redux-today).
+To close to real-life RTK usage we should create reusable connect logic. Let's create a `src/logic/connect.js` file and use the next code snippet:
 
-Let's look at how to set up a basic store for the LightningJS app with Redux Toolkit (RTK). For example, we'll create a trivial counter app.
-
-Firstly add the Redux Toolkit package to your project `npm install @reduxjs/toolkit` and download Redux DevTools for Chrome [here](https://chrome.google.com/webstore/detail/redux-devtools/lmhkpmbekcpmknklioeibfkpmmfibljd).
-
-#### Configure our store
-Create a file named `src/logic/store.js`. Import the `configureStore` API from Redux Toolkit. Read more about store configuration [on the official docs](https://redux-toolkit.js.org/api/configureStore).
 ```javascript
-import { configureStore } from '@reduxjs/toolkit'
-import counter from './counter/counter.slice'
+import { store } from './store'
 
-export const store = configureStore({
-  reducer: {
-    counter,
-  },
-})
-```
+const { getState, subscribe } = store
 
-#### Slice creation
-Redux slice it's a common Redux reducer with build-in common use-cases implementation out of the box.
-> **Note:** reducer functions may "mutate" the state using Immer under the hood.
+const defaultCondition = ({ currentProp, previousProp }) => currentProp !== previousProp
 
-#### For slice creation follow the next flow:
-1. In the `logic` folder create relevant slice folder. It's `logic/counter` in our case;
-2. Use the next pattern for a slice file naming and content
-	- `sliceName.slice.js` for main logic
-	- `sliceName.constants.js` for constants
-	- `sliceName.selector.js` for getting state data
-	- `sliceName.thunk.js` for asyn actions
-	- `README.md` for description (optional)
+export const handleStoreUpdate = (controllers, getState) => () => {
+  const state = getState()
+  const keys = Object.keys(controllers)
 
-Counter slice files have next content:
-```javascript
-// src/logic/counter.constants.js
+  for (let i = 0; i < keys.length; i += 1) {
+    const controller = controllers[keys[i]]
+    const { condition, selector, callback, _previousProp } = controller
+    const predicate = condition || defaultCondition
 
-export const name = 'counter'
-```
-```javascript
-// src/logic/counter.selector.js
+    const currentProp = selector(state)
 
-export const getCounterValue = state => state.counter.value
-```
-```javascript
-// src/logic/counter.slice.js
+    const shouldUpdate = predicate({ previousProp: _previousProp, currentProp })
 
-import { createSlice } from '@reduxjs/toolkit'
+    if (shouldUpdate) {
+      controller._previousProp = currentProp
+      callback(currentProp)
+    }
+  }
+}
 
-const counterSlice = createSlice({
-  name: 'counter',
-  initialState: {
-	value: 0
+export const connect = controllers => instance => {
+  const controllersToSubscribe = controllers(instance)
+
+  // Allow components to receive Redux state on connect
+  const state = getState()
+
+  const orderControllers = Array.isArray(controllersToSubscribe)
+    ? controllersToSubscribe
+    : Object.values(controllersToSubscribe)
+
+  orderControllers.forEach(({ selector, callback }) => {
+    if (callback && selector) {
+      callback(selector(state))
+    }
+  })
+
+  const unsubscribe = subscribe(handleStoreUpdate(controllersToSubscribe, getState))
+
+  return () => {
+    const keys = Object.keys(controllers)
+    for (let i = 0; i < keys.length; i += 1) {
+      const controller = controllers[keys[i]]
+      controller._previousProp = undefined
+    }
+    unsubscribe()
+  }
+}
+
+export const stateToProp = (selector, instance, name) => ({
+  selector,
+  callback: value => {
+    instance[name] = value
   },
-  reducers: {
-    increment(state) {
-      state.value++
-    },
-    decrement(state) {
-      state.value--
-    },
-    incrementByAmount(state, action) {
-      state.value += action.payload
-    },
-  },
 })
+```
 
-export const { increment, decrement } = counterSlice.actions
-export default counterSlice.reducer
+We've created useful functions for our components. Now, we can update our `CounterScreen` using this stuff.
 
-export const asyncIncrement = () => async dispatch => {
-  const value = await new Promise((resolve, reject) => {
-    setTimeout(() => {
-      resolve(5)
-    }, 1000)
-  })
+Firstly, we should create a `screens/Counter/CounterScreen.connect.js` file with next code snippet:
 
-  dispatch(counterSlice.actions.incrementByAmount(value))
+```javascript
+import { connect, stateToProp } from '../../logic/connect'
+import { getCounterValue } from '../../logic/counter/counter.selector'
+
+export default connect(instance => [stateToProp(getCounterValue, instance, 'counter')])
+```
+
+The `connect` function automatically subscribes to the store update and calls our callbacks if a component should update.
+It gets a callback as a parameter that gets the component `instance` (`this` object) and returns an array of subscribers handlers.
+
+The `stateToProp` for a component instance (second param, `this` object in a connected component) sets a value by `name`(third param, `'counter'`) and automatically gets updated value from store with selector (first param, '`getCounterValue`').
+
+Finaly, let's update our `CounterScreen`.
+1. Remove all store logic from the `_init` hook.
+2. Add related setter (name must be equal to the third param of `stateToProp` func).
+Here we can do all the necessary stuff when state updated.
+```javascript
+set counter(value) {
+  this.tag('CounterScreen.Counter').text.text = value
 }
 ```
-> **Note:** A function that accepts an initial state, an object of reducer functions, and a "slice name", and automatically generates action creators and action types that correspond to the reducers and state. This API is the standard approach for writing Redux logic.
+3. Connect a component to the store
 ```javascript
-// src/logic/counter.thunk.js
+_active() {
+  this._unsubscribe = connect(this)
+}
 
-import { createAsyncThunk } from '@reduxjs/toolkit'
-import { name } from './counter.constants'
-import { incrementByAmount } from './counter.slice'
-
-export const asyncIncrement = createAsyncThunk(
-  `${name}/asyncIncrement`,
-  async (_, { dispatch }) => {
-    const value = await new Promise((resolve, reject) => {
-      setTimeout(() => {
-        resolve(5)
-      }, 1000)
-    })
-
-    await dispatch(incrementByAmount(value))
-  }
-)
-```
-More about asynchronous logic and data fetching with RTK read [here](https://redux-toolkit.js.org/usage/usage-guide#asynchronous-logic-and-data-fetching).
-
-# Using Redux on Lightning component
-> **Warning:** it's not production-ready implementation, just for example. We add more realistic logic in the `rtk/advanced-setup` branch.
-
-In the `router/setup` branch we've added the `CounterScreen` with a necessary template for current logic. **Important tip & trick:** we should update our template with [pass signals](https://rdkcentral.github.io/Lightning/docs/components/communication/signal#pass-signals) to pass over a signal to the parent otherwise we cannot reach the handler method.
-
-![counter_screen_update](./screenshots/counter_screen_update.png)
-
-### Let's expand it with Redux
-Firstly, we should `import store from './logic/store'`.
-Secondly, we subscribe our component for store update and call the initial dispatch on the `_init` hook. Whenever the state will update - our subscribed component gets the necessary value and update it on the template.
-```javascript
-  _init() {
-    this.focusIndex = 0
-
-    store.subscribe(() => {     
-	  const state = store.getState()
-      this.tag('CounterScreen.Counter').text.text = getCounterValue(state)
-    })
-
-    store.dispatch({ type: '__INIT__' })
-  }
-```
-Thirdly, add the handler methods for our buttons signals and dispatch appropriate action which should be imported above.
-```javascript
-  _increment() {
-    store.dispatch(increment())
-  }
-
-  _decrement() {
-    store.dispatch(decrement())
-  }
-
-  _asyncIncrement() {
-    store.dispatch(asyncIncrement())
-  }
+_inactive() {
+  if (this._unsubscribe) {
+    this._unsubscribe()
+  }
+}
 ```
 
-Nice! We've made friends Redux with Lightning component.
+Good job! Nothing difficult, just follow this pattern.

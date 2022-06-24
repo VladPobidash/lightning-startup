@@ -1,5 +1,5 @@
 import { Lightning } from '@lightningjs/sdk'
-import { getCounterValue } from '../../logic/counter/counter.selector'
+import connect from './CounterScreen.connect'
 import { decrement, increment } from '../../logic/counter/counter.slice'
 import { asyncIncrement } from '../../logic/counter/counter.thunk'
 import { store } from '../../logic/store'
@@ -46,15 +46,22 @@ export class CounterScreen extends Lightning.Component {
     }
   }
 
+  _active() {
+    this._unsubscribe = connect(this)
+  }
+
+  _inactive() {
+    if (this._unsubscribe) {
+      this._unsubscribe()
+    }
+  }
+
   _init() {
     this.focusIndex = 0
+  }
 
-    store.subscribe(() => {
-      const state = store.getState()
-      this.tag('CounterScreen.Counter').text.text = getCounterValue(state)
-    })
-
-    store.dispatch({ type: '__INIT__' })
+  set counter(value) {
+    this.tag('CounterScreen.Counter').text.text = value
   }
 
   _handleLeft() {
