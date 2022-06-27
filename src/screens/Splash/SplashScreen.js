@@ -1,4 +1,5 @@
 import { Lightning, Router, Utils } from '@lightningjs/sdk'
+import connect from './SplashScreen.connect'
 import BlueCenter from '../../ui/templates/BlueCenter'
 
 export class SplashScreen extends Lightning.Component {
@@ -15,15 +16,27 @@ export class SplashScreen extends Lightning.Component {
     }
   }
 
+  _active() {
+    this._unsubscribe = connect(this)
+  }
+
+  _inactive() {
+    if (this._unsubscribe) {
+      this._unsubscribe()
+    }
+  }
+
+  set isReady(value) {
+    if (value) {
+      setTimeout(() => Router.resume(), 1000)
+    }
+  }
+
   _init() {
     this._pulse = this.tag('SplashScreen.Image').animation({
       duration: 2,
-      repeat: 0,
+      repeat: -1,
       actions: [{ p: 'alpha', v: { 0: 0, 0.5: 1, 1: 0 } }],
-    })
-
-    this._pulse.on('finish', () => {
-      setTimeout(() => Router.resume(), 2000)
     })
 
     this._pulse.start()
