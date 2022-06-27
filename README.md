@@ -50,6 +50,25 @@ So, `myIp` and `layoutData` just common axios GET requests, `setIP`, `signIn` an
 Also, don't forget to add axios retry for our app. Just add `import './client/setup'` in `src/index.js`.
 It's a simple plugin that intercepts failed requests and retries them whenever possible.
 
+> **Warning:** Don't forget to update the store by adding new slices before using them.
+
+```javascript
+import { configureStore } from '@reduxjs/toolkit'
+import app from './app/app.slice'
+import user from './user/user.slice'
+import layout from './layout/layout.slice'
+import counter from './counter/counter.slice'
+
+export const store = configureStore({
+  reducer: {
+    app,
+    user,
+    layout,
+    counter,
+  },
+})
+```
+
 Finally, we should use new logic in our components. Replace mocked loading in a `SplashScreen`. Also you can get layout data and user ip using `connect` and `stateToProp`.
 
 ```javascript
