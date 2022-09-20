@@ -26,6 +26,11 @@ Every branch has an uniq README file with implemented features description, code
 	Includes such plugins as [Router](https://rdkcentral.github.io/Lightning-SDK/#/plugins/router/index?id=router), [VideoPlayer](https://rdkcentral.github.io/Lightning-SDK/#/plugins/videoplayer?id=videoplayer), etc)
 - [LightningJS Forum](https://forum.lightningjs.io/) discuss everything related to LightningJS
 
+## Must have to read
+- [Embedded first development principles](https://forum.lightningjs.io/t/embedded-first-development-principles/230)
+- [Memory leaks in Lightning](https://forum.lightningjs.io/t/memory-leaks-in-lightning/229)
+- [Performance issues in Lightning?](https://forum.lightningjs.io/t/performance-issues-in-lightning/260)
+
 
 ### Getting started
 
